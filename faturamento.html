@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Controle de Gastos — Ciclos de Faturamento</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <meta name="description" content="Configure as datas de fechamento e vencimento de cada mês da fatura." />
+  <link rel="stylesheet" href="css/global.css" />
+  <link rel="stylesheet" href="css/app.css" />
+</head>
+<body>
+
+  <header class="mobile-header">
+    <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Menu">☰</button>
+    <span class="mobile-logo" style="display:flex;align-items:center;gap:8px;"><img src="favicon.png" style="width:24px; height:24px; border-radius:50%; object-fit:cover;"> Controle de Gastos</span>
+    <div style="width:32px"></div>
+  </header>
+  <div class="nav-overlay" id="nav-overlay"></div>
+
+  <nav class="nav-sidebar" id="nav-sidebar">
+    <div class="nav-logo">
+      <div class="nav-logo-icon" style="background:transparent; border:none; padding:0;"><img src="favicon.png" style="width:28px; height:28px; border-radius:50%; object-fit:cover;"></div>
+      <span class="nav-logo-text">Controle de Gastos</span>
+    </div>
+
+    <a href="lancamentos.html" class="nav-link"><span class="nav-link-icon">➕</span> Lançamentos</a>
+
+    <span class="nav-section-title">Principal</span>
+    <a href="dashboard.html" class="nav-link"><span class="nav-link-icon">📊</span> Dashboard</a>
+    <a href="extrato.html" class="nav-link"><span class="nav-link-icon">📋</span> Extrato</a>
+
+    <span class="nav-section-title">Configurações</span>
+    <a href="cartoes.html" class="nav-link"><span class="nav-link-icon">💳</span> Cartões</a>
+    <a href="faturamento.html" class="nav-link active"><span class="nav-link-icon">📅</span> Faturamento</a>
+
+    <div class="nav-bottom">
+      <div class="user-info" id="user-info-btn">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div style="flex:1;min-width:0">
+          <div class="user-name" id="user-name">Carregando...</div>
+          <div class="user-email" id="user-email"></div>
+        </div>
+        <span style="color:var(--text-muted);font-size:0.8rem">⏏️</span>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main-content">
+
+    <div class="page-header">
+      <div class="page-title">
+        <h1>Ciclos de Faturamento</h1>
+        <p>Configure as datas de fechamento e vencimento de cada mês</p>
+      </div>
+    </div>
+
+    <!-- Info card -->
+    <div class="card" style="margin-bottom:var(--space-lg);border-color:rgba(124,58,237,0.25);background:rgba(124,58,237,0.06)">
+      <div style="display:flex;gap:14px;align-items:flex-start">
+        <span style="font-size:1.6rem">📅</span>
+        <div>
+          <div style="font-weight:700;margin-bottom:6px">Como funciona o mês de faturamento?</div>
+          <p style="font-size:0.85rem;line-height:1.7;color:var(--text-secondary)">
+            O <strong style="color:var(--text-primary)">mês de faturamento</strong> é o período entre a data de fechamento do mês anterior e 1 dia antes da data de fechamento do mês atual.<br>
+            <strong style="color:#A78BFA">Exemplo:</strong> Se Maio fecha em <strong>10/05</strong> e Junho fecha em <strong>10/06</strong>, o período de Junho vai de <strong>10/05 até 09/06</strong>.
+            O filtro no extrato e dashboard passará a usar esse período ao invés do mês calendário.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Year selector -->
+    <div style="display:flex;align-items:center;gap:var(--space-md);margin-bottom:var(--space-md);flex-wrap:wrap">
+      <div class="chips" id="year-chips"></div>
+      <div id="save-status" style="font-size:0.8rem;color:var(--text-muted);margin-left:auto"></div>
+    </div>
+
+    <!-- Loading -->
+    <div class="loading-overlay" id="table-loading"><div class="spinner"></div></div>
+
+    <!-- Table -->
+    <div class="card" style="padding:0;overflow:hidden;display:none" id="table-card">
+      <div class="table-wrapper">
+        <table class="table" id="ciclos-table">
+          <thead>
+            <tr>
+              <th style="width:160px">Mês / Fatura</th>
+              <th>Data de Fechamento</th>
+              <th>Data de Vencimento</th>
+              <th>Limite de Gastos</th>
+              <th>Período de Faturamento</th>
+              <th style="text-align:center">Status</th>
+            </tr>
+          </thead>
+          <tbody id="ciclos-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <div id="toast-container"></div>
+
+  <style>
+    .ciclo-input {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.85rem;
+      padding: 8px 10px;
+      outline: none;
+      transition: all var(--transition);
+      width: 150px;
+      color-scheme: dark;
+    }
+    .ciclo-input:focus {
+      border-color: var(--accent-purple);
+      box-shadow: 0 0 0 3px rgba(124,58,237,0.12);
+    }
+    .ciclo-input.saved {
+      border-color: rgba(16,185,129,0.5);
+      background: rgba(16,185,129,0.05);
+    }
+    .periodo-text {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    .periodo-text.active {
+      color: #A78BFA;
+      font-weight: 600;
+    }
+  </style>
+
+  <script type="module" src="js/faturamento.js"></script>
+</body>
+</html>

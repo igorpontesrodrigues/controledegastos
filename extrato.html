@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Controle de Gastos — Extrato</title>
+  <meta name="description" content="Extrato completo de lançamentos financeiros. Filtre por mês, cartão e categoria." />
+  <link rel="stylesheet" href="css/global.css" />
+  <link rel="stylesheet" href="css/app.css" />
+</head>
+<body>
+
+  <!-- Mobile Header -->
+  <header class="mobile-header">
+    <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Menu">☰</button>
+    <span class="mobile-logo" style="display:flex;align-items:center;gap:8px;"><img src="favicon.png" style="width:24px; height:24px; border-radius:50%; object-fit:cover;"> Controle de Gastos</span>
+    <div style="width:32px"></div>
+  </header>
+  <div class="nav-overlay" id="nav-overlay"></div>
+
+  <!-- Sidebar -->
+  <nav class="nav-sidebar" id="nav-sidebar">
+    <div class="nav-logo">
+      <div class="nav-logo-icon" style="background:transparent; border:none; padding:0;"><img src="favicon.png" style="width:28px; height:28px; border-radius:50%; object-fit:cover;"></div>
+      <span class="nav-logo-text">Controle de Gastos</span>
+    </div>
+
+    <a href="lancamentos.html" class="nav-link">
+      <span class="nav-link-icon">➕</span> Lançamentos
+    </a>
+
+    <span class="nav-section-title">Principal</span>
+    <a href="dashboard.html" class="nav-link">
+      <span class="nav-link-icon">📊</span> Dashboard
+    </a>
+    <a href="extrato.html" class="nav-link active">
+      <span class="nav-link-icon">📋</span> Extrato
+    </a>
+
+    <span class="nav-section-title">Configurações</span>
+    <a href="cartoes.html" class="nav-link">
+      <span class="nav-link-icon">💳</span> Cartões
+    </a>
+    <a href="faturamento.html" class="nav-link">
+      <span class="nav-link-icon">📅</span> Faturamento
+    </a>
+
+    <div class="nav-bottom">
+      <div class="user-info" id="user-info-btn">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div style="flex:1;min-width:0">
+          <div class="user-name" id="user-name">Carregando...</div>
+          <div class="user-email" id="user-email"></div>
+        </div>
+        <span style="color:var(--text-muted);font-size:0.8rem">⏏️</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- Page Header -->
+    <div class="page-header">
+      <div class="page-title">
+        <h1>Extrato</h1>
+        <p>Todos os seus lançamentos</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div class="month-nav">
+          <button class="month-nav-btn" id="prev-month" aria-label="Mês anterior">‹</button>
+          <div style="text-align:center">
+            <span class="month-nav-text" id="month-label">Junho 2026</span>
+            <div id="month-sublabel" style="font-size:0.7rem;color:#A78BFA;font-weight:500;margin-top:2px"></div>
+          </div>
+          <button class="month-nav-btn" id="next-month" aria-label="Próximo mês">›</button>
+        </div>
+        <a href="lancamentos.html" class="btn btn-primary btn-sm">➕ Novo</a>
+      </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+      <div class="filter-search">
+        <span class="filter-search-icon">🔍</span>
+        <input class="form-input" type="text" id="search-input" placeholder="Buscar por descrição ou local..." />
+      </div>
+      <select class="form-select" id="filter-tipo" style="width:auto;min-width:140px">
+        <option value="">Todos os tipos</option>
+        <option value="despesa">Despesas</option>
+        <option value="receita">Receitas</option>
+      </select>
+      <select class="form-select" id="filter-cartao" style="width:auto;min-width:160px">
+        <option value="">Todos os cartões</option>
+      </select>
+      <select class="form-select" id="filter-cat" style="width:auto;min-width:160px">
+        <option value="">Todas as categorias</option>
+      </select>
+      <select class="form-select" id="filter-status" style="width:auto;min-width:150px">
+        <option value="">Todos os status</option>
+        <option value="ativo">Ativos</option>
+        <option value="cancelado">Cancelados</option>
+      </select>
+    </div>
+
+    <!-- Summary Bar -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:var(--space-md);margin-bottom:var(--space-lg)">
+      <div class="card" style="padding:var(--space-md)">
+        <div class="card-title">Despesas</div>
+        <div class="card-value" id="sum-despesas" style="color:#F87171;font-size:1.3rem">R$ 0,00</div>
+      </div>
+      <div class="card" style="padding:var(--space-md)">
+        <div class="card-title">Receitas</div>
+        <div class="card-value" id="sum-receitas" style="color:#34D399;font-size:1.3rem">R$ 0,00</div>
+      </div>
+      <div class="card" style="padding:var(--space-md)">
+        <div class="card-title">Saldo</div>
+        <div class="card-value" id="sum-saldo" style="font-size:1.3rem">R$ 0,00</div>
+      </div>
+      <div class="card" style="padding:var(--space-md)">
+        <div class="card-title">Lançamentos</div>
+        <div class="card-value" id="sum-count" style="color:#A78BFA;font-size:1.3rem">0</div>
+      </div>
+      <div class="card" style="padding:var(--space-md)">
+        <div class="card-title">Cancelados</div>
+        <div class="card-value" id="sum-cancelados" style="color:#64748B;font-size:1.3rem">R$ 0,00</div>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="card" style="padding:0;overflow:hidden">
+      <div id="table-loading" class="loading-overlay">
+        <div class="spinner"></div>
+      </div>
+
+      <div class="table-wrapper" id="table-wrapper" style="display:none">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Descrição</th>
+              <th>Data</th>
+              <th>Pagamento</th>
+              <th>Cartão</th>
+              <th>Categoria</th>
+              <th>Parcela</th>
+              <th style="text-align:right">Valor</th>
+              <th style="text-align:center">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+
+      <div class="empty-state" id="table-empty" style="display:none">
+        <div class="empty-icon">🧾</div>
+        <div class="empty-title">Nenhum lançamento encontrado</div>
+        <div class="empty-desc">Tente mudar os filtros ou adicionar um novo lançamento.</div>
+        <a href="lancamentos.html" class="btn btn-primary btn-sm">➕ Adicionar</a>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ══════════════════════════════════════════
+       MODAL: EDITAR LANÇAMENTO
+  ══════════════════════════════════════════ -->
+  <div class="modal-overlay" id="modal-edit">
+    <div class="modal" style="max-width:580px;max-height:90vh;overflow-y:auto">
+      <div class="modal-header">
+        <h3 class="modal-title">✏️ Editar Lançamento</h3>
+        <button class="modal-close" onclick="closeEditModal()" aria-label="Fechar">&times;</button>
+      </div>
+
+      <form id="edit-form" novalidate style="display:flex;flex-direction:column;gap:var(--space-md)">
+        <input type="hidden" id="edit-id" />
+
+        <!-- Parcela notice -->
+        <div id="edit-parcela-notice" style="display:none;flex-direction:column;gap:8px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:10px;padding:12px 14px;font-size:0.85rem;color:#FCD34D">
+          <div style="font-weight:600">⚠️ Lançamento Parcelado</div>
+          <div>Escolha como deseja aplicar as alterações:</div>
+          <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <input type="radio" name="edit-parcela-scope" value="single" checked style="accent-color:#F59E0B" />
+              Somente esta parcela
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer" title="A data não será alterada nas outras parcelas">
+              <input type="radio" name="edit-parcela-scope" value="all" style="accent-color:#F59E0B" />
+              Todas as parcelas deste grupo
+              <span style="font-size:0.7rem;opacity:0.7">(exceto a data)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Tipo -->
+        <div class="form-group">
+          <label class="form-label">Tipo</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <button type="button" class="tipo-btn active" id="edit-tipo-despesa" onclick="editSetTipo('despesa')">
+              <span style="font-size:1.1rem">💸</span> <span style="font-weight:700;font-size:0.88rem">Despesa</span>
+            </button>
+            <button type="button" class="tipo-btn" id="edit-tipo-receita" onclick="editSetTipo('receita')">
+              <span style="font-size:1.1rem">💵</span> <span style="font-weight:700;font-size:0.88rem">Receita</span>
+            </button>
+          </div>
+          <input type="hidden" id="edit-tipo" value="despesa" />
+        </div>
+
+        <!-- Descrição + Valor -->
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="edit-descricao">Descrição *</label>
+            <input class="form-input" type="text" id="edit-descricao" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-valor">Valor (R$) *</label>
+            <div class="input-prefix">
+              <span>R$</span>
+              <input class="form-input" type="number" id="edit-valor" min="0.01" step="0.01" required />
+            </div>
+          </div>
+        </div>
+
+        <!-- Data + Cartão -->
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="edit-data">Data *</label>
+            <input class="form-input" type="date" id="edit-data" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-cartao">Cartão</label>
+            <select class="form-select" id="edit-cartao">
+              <option value="">Sem cartão / N/A</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Forma de Pagamento -->
+        <div class="form-group">
+          <label class="form-label">Forma de Pagamento</label>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+            <button type="button" class="forma-btn active" id="edit-forma-credito" onclick="editSetForma('credito')">
+              <span style="font-size:1.1rem">💳</span>
+              <span style="font-weight:700;font-size:0.82rem">Crédito</span>
+            </button>
+            <button type="button" class="forma-btn" id="edit-forma-pix" onclick="editSetForma('pix')">
+              <span style="font-size:1.1rem">⚡</span>
+              <span style="font-weight:700;font-size:0.82rem">Pix</span>
+            </button>
+            <button type="button" class="forma-btn" id="edit-forma-debito" onclick="editSetForma('debito')">
+              <span style="font-size:1.1rem">🏦</span>
+              <span style="font-weight:700;font-size:0.82rem">Débito</span>
+            </button>
+            <button type="button" class="forma-btn" id="edit-forma-boleto" onclick="editSetForma('boleto')">
+              <span style="font-size:1.1rem">📄</span>
+              <span style="font-weight:700;font-size:0.82rem">Boleto</span>
+            </button>
+          </div>
+          <input type="hidden" id="edit-forma-pagamento" value="credito" />
+        </div>
+
+        <!-- Status de Pagamento (Edit) -->
+        <div class="form-group" id="edit-pago-section" style="display:none">
+          <div class="toggle-group" style="padding:12px 16px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px solid rgba(255,255,255,0.05)">
+            <div>
+              <div class="toggle-label" style="display:flex;align-items:center;gap:8px">✅ Já foi pago?</div>
+              <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px">Status de pagamento desta conta</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="edit-pago-checkbox" checked />
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Categoria -->
+        <div class="form-group">
+          <label class="form-label">Categoria</label>
+          <div class="category-grid" id="edit-category-grid"></div>
+          <input type="hidden" id="edit-categoria" value="outros" />
+        </div>
+
+        <!-- Local + Observação -->
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="edit-local">Local / Estabelecimento</label>
+            <input class="form-input" type="text" id="edit-local" placeholder="Opcional" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-obs">Observação</label>
+            <input class="form-input" type="text" id="edit-obs" placeholder="Opcional" />
+          </div>
+        </div>
+
+        <!-- Error -->
+        <div class="auth-error" id="edit-error">
+          <span>⚠️</span>
+          <span id="edit-error-msg">Preencha os campos obrigatórios.</span>
+        </div>
+
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px">
+          <button type="button" class="btn btn-ghost" onclick="closeEditModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="edit-submit-btn" style="min-width:130px">
+            <span class="btn-spinner"></span>
+            <span class="btn-text">💾 Salvar</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       MODAL: EXCLUIR / CANCELAR
+  ══════════════════════════════════════════ -->
+  <div class="modal-overlay" id="modal-delete">
+    <div class="modal" style="max-width:440px">
+      <div class="modal-header">
+        <h3 class="modal-title" id="action-modal-title">Ações do Lançamento</h3>
+        <button class="modal-close" onclick="closeDeleteModal()" aria-label="Fechar">&times;</button>
+      </div>
+
+      <p style="color:var(--text-secondary);margin-bottom:var(--space-lg);font-size:0.9rem" id="delete-desc">
+        O que deseja fazer com este lançamento?
+      </p>
+
+      <!-- Parcela scope (for installments) -->
+      <div id="delete-parcela-opts" style="display:none;margin-bottom:var(--space-lg)">
+        <div style="font-size:0.82rem;font-weight:600;color:var(--text-secondary);margin-bottom:10px">
+          Abrangência da ação:
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;border-radius:8px;border:1px solid var(--border)">
+            <input type="radio" name="delete-opt" value="single" checked style="accent-color:var(--accent-purple)" />
+            <span style="font-size:0.85rem">Somente esta parcela (<span id="del-parcela-atual"></span>)</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;border-radius:8px;border:1px solid var(--border)">
+            <input type="radio" name="delete-opt" value="group" style="accent-color:var(--accent-purple)" />
+            <span style="font-size:0.85rem">Todas as parcelas restantes do grupo</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Action buttons -->
+      <div style="display:flex;flex-direction:column;gap:10px">
+
+        <!-- Cancel / Estorno -->
+        <button
+          class="btn"
+          id="btn-cancelar"
+          onclick="confirmCancelar()"
+          style="justify-content:flex-start;gap:12px;background:rgba(245,158,11,0.08);color:#FCD34D;border:1px solid rgba(245,158,11,0.25);padding:14px 16px"
+        >
+          <span style="font-size:1.2rem">↩️</span>
+          <div style="text-align:left">
+            <div style="font-weight:700;font-size:0.88rem" id="btn-cancelar-label">Cancelar / Estorno</div>
+            <div style="font-size:0.73rem;opacity:0.7">Mantém o histórico, mas remove dos totais</div>
+          </div>
+          <span class="btn-spinner" style="margin-left:auto"></span>
+        </button>
+
+        <!-- Delete -->
+        <button
+          class="btn"
+          id="confirm-delete-btn"
+          onclick="confirmDelete()"
+          style="justify-content:flex-start;gap:12px;background:rgba(239,68,68,0.08);color:#F87171;border:1px solid rgba(239,68,68,0.2);padding:14px 16px"
+        >
+          <span style="font-size:1.2rem">🗑️</span>
+          <div style="text-align:left">
+            <div style="font-weight:700;font-size:0.88rem">Excluir permanentemente</div>
+            <div style="font-size:0.73rem;opacity:0.7">Remove o registro do banco de dados</div>
+          </div>
+          <span class="btn-spinner" style="margin-left:auto"></span>
+        </button>
+
+        <button class="btn btn-ghost" onclick="closeDeleteModal()">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast-container"></div>
+
+  <style>
+    .tipo-btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px; border-radius: var(--radius-md);
+      border: 1.5px solid var(--border); background: var(--bg-input);
+      cursor: pointer; transition: all var(--transition);
+      font-family: 'Inter', sans-serif; color: var(--text-secondary);
+    }
+    .tipo-btn:hover { border-color: var(--border-active); }
+    .tipo-btn.active { border-color: var(--accent-purple); background: rgba(124,58,237,0.12); color: var(--text-primary); }
+
+    .forma-btn {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      padding: 12px 8px; border-radius: var(--radius-md);
+      border: 1.5px solid var(--border); background: var(--bg-input);
+      cursor: pointer; transition: all var(--transition);
+      font-family: 'Inter', sans-serif; color: var(--text-secondary);
+    }
+    .forma-btn:hover { border-color: var(--border-active); }
+    .forma-btn.active { border-color: var(--accent-purple); background: rgba(124,58,237,0.12); color: var(--text-primary); }
+
+    /* Cancelled row styling */
+    tr.row-cancelado td { opacity: 0.45; }
+    tr.row-cancelado td:first-child { text-decoration: line-through; }
+
+    .badge-cancelado {
+      background: rgba(100,116,139,0.2); color: #94A3B8;
+      padding: 3px 9px; border-radius: 999px;
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+    }
+  </style>
+
+  <script type="module" src="js/extrato.js"></script>
+</body>
+</html>

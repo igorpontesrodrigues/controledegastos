@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Controle de Gastos — Meus Cartões</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <meta name="description" content="Gerencie seus cartões de crédito no Controle de Gastos." />
+  <link rel="stylesheet" href="css/global.css" />
+  <link rel="stylesheet" href="css/app.css" />
+</head>
+<body>
+
+  <!-- Mobile Header -->
+  <header class="mobile-header">
+    <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Menu">☰</button>
+    <span class="mobile-logo" style="display:flex;align-items:center;gap:8px;"><img src="favicon.png" style="width:24px; height:24px; border-radius:50%; object-fit:cover;"> Controle de Gastos</span>
+    <div style="width:32px"></div>
+  </header>
+  <div class="nav-overlay" id="nav-overlay"></div>
+
+  <!-- Sidebar -->
+  <nav class="nav-sidebar" id="nav-sidebar">
+    <div class="nav-logo">
+      <div class="nav-logo-icon" style="background:transparent; border:none; padding:0;"><img src="favicon.png" style="width:28px; height:28px; border-radius:50%; object-fit:cover;"></div>
+      <span class="nav-logo-text">Controle de Gastos</span>
+    </div>
+
+    <a href="lancamentos.html" class="nav-link">
+      <span class="nav-link-icon">➕</span> Lançamentos
+    </a>
+
+    <span class="nav-section-title">Principal</span>
+    <a href="dashboard.html" class="nav-link">
+      <span class="nav-link-icon">📊</span> Dashboard
+    </a>
+    <a href="extrato.html" class="nav-link">
+      <span class="nav-link-icon">📋</span> Extrato
+    </a>
+
+    <span class="nav-section-title">Configurações</span>
+    <a href="cartoes.html" class="nav-link active">
+      <span class="nav-link-icon">💳</span> Cartões
+    </a>
+    <a href="faturamento.html" class="nav-link">
+      <span class="nav-link-icon">📅</span> Faturamento
+    </a>
+
+    <div class="nav-bottom">
+      <div class="user-info" id="user-info-btn">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div style="flex:1;min-width:0">
+          <div class="user-name" id="user-name">Carregando...</div>
+          <div class="user-email" id="user-email"></div>
+        </div>
+        <span style="color:var(--text-muted);font-size:0.8rem">⏏️</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="page-header">
+      <div class="page-title">
+        <h1>Meus Cartões</h1>
+        <p>Gerencie seus cartões de crédito</p>
+      </div>
+      <button class="btn btn-primary" id="btn-add-cartao">
+        ➕ Adicionar Cartão
+      </button>
+    </div>
+
+    <!-- Loading -->
+    <div class="loading-overlay" id="cartoes-loading">
+      <div class="spinner"></div>
+    </div>
+
+    <!-- Cards Grid -->
+    <div class="cards-grid" id="cartoes-grid" style="display:none"></div>
+
+    <!-- Empty State -->
+    <div class="empty-state card" id="cartoes-empty" style="display:none">
+      <div class="empty-icon">💳</div>
+      <div class="empty-title">Nenhum cartão cadastrado</div>
+      <div class="empty-desc">Adicione seu primeiro cartão de crédito para começar a registrar seus gastos.</div>
+      <button class="btn btn-primary" onclick="document.getElementById('btn-add-cartao').click()">
+        ➕ Adicionar Cartão
+      </button>
+    </div>
+  </main>
+
+  <!-- Modal: Adicionar/Editar Cartão -->
+  <div class="modal-overlay" id="modal-cartao">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-title">Novo Cartão</h3>
+        <button class="modal-close" onclick="closeModal()" aria-label="Fechar">&times;</button>
+      </div>
+
+      <form id="cartao-form" novalidate style="display:flex;flex-direction:column;gap:var(--space-md)">
+        <input type="hidden" id="cartao-id" />
+
+        <div class="form-group">
+          <label class="form-label" for="cartao-nome">Nome do Cartão *</label>
+          <input class="form-input" type="text" id="cartao-nome" placeholder="Ex: Nubank, Itaú Platinum..." required />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="cartao-bandeira">Bandeira</label>
+            <select class="form-select" id="cartao-bandeira">
+              <option value="">Selecione</option>
+              <option>Visa</option>
+              <option>Mastercard</option>
+              <option>Elo</option>
+              <option>Amex</option>
+              <option>Hipercard</option>
+              <option>Outro</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="cartao-fechamento">Dia de Fechamento</label>
+            <input class="form-input" type="number" id="cartao-fechamento" placeholder="Ex: 10" min="1" max="31" />
+          </div>
+        </div>
+
+        <!-- Cor do cartão -->
+        <div class="form-group">
+          <label class="form-label">Cor do Cartão</label>
+          <div id="cores-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:4px"></div>
+          <input type="hidden" id="cartao-cor" value="linear-gradient(135deg, #7C3AED, #5B21B6)" />
+        </div>
+
+        <!-- Preview do cartão -->
+        <div class="credit-card-visual" id="card-preview" style="max-width:280px;margin:0 auto">
+          <div class="card-chip"></div>
+          <div class="card-number">•••• •••• •••• ••••</div>
+          <div class="card-bottom">
+            <div>
+              <div style="font-size:0.65rem;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.08em">Nome do cartão</div>
+              <div class="card-holder-name" id="preview-nome">Meu Cartão</div>
+            </div>
+            <div class="card-brand" id="preview-bandeira">VISA</div>
+          </div>
+        </div>
+
+        <div class="auth-error" id="cartao-error" style="margin-top:0">
+          <span>⚠️</span>
+          <span id="cartao-error-msg">Preencha o nome do cartão.</span>
+        </div>
+
+        <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:8px">
+          <button type="button" class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="cartao-submit-btn" style="min-width:130px">
+            <span class="btn-spinner"></span>
+            <span class="btn-text">💾 Salvar</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast-container"></div>
+
+  <script type="module" src="js/cartoes.js"></script>
+</body>
+</html>

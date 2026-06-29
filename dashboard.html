@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Controle de Gastos — Dashboard</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <meta name="description" content="Painel de controle financeiro pessoal. Acompanhe seus gastos, receitas e parcelas em tempo real." />
+  <link rel="stylesheet" href="css/global.css" />
+  <link rel="stylesheet" href="css/app.css" />
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <!-- Mobile Header -->
+  <header class="mobile-header">
+    <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Menu">☰</button>
+    <span class="mobile-logo" style="display:flex;align-items:center;gap:8px;"><img src="favicon.png" style="width:24px; height:24px; border-radius:50%; object-fit:cover;"> Controle de Gastos</span>
+    <div style="width:32px"></div>
+  </header>
+  <div class="nav-overlay" id="nav-overlay"></div>
+
+  <!-- Sidebar -->
+  <nav class="nav-sidebar" id="nav-sidebar">
+    <div class="nav-logo">
+      <div class="nav-logo-icon" style="background:transparent; border:none; padding:0;"><img src="favicon.png" style="width:28px; height:28px; border-radius:50%; object-fit:cover;"></div>
+      <span class="nav-logo-text">Controle de Gastos</span>
+    </div>
+
+    <a href="lancamentos.html" class="nav-link" id="nav-lancamentos">
+      <span class="nav-link-icon">➕</span> Lançamentos
+    </a>
+
+    <span class="nav-section-title">Principal</span>
+    <a href="dashboard.html" class="nav-link active" id="nav-dashboard">
+      <span class="nav-link-icon">📊</span> Dashboard
+    </a>
+    <a href="extrato.html" class="nav-link" id="nav-extrato">
+      <span class="nav-link-icon">📋</span> Extrato
+    </a>
+
+    <span class="nav-section-title">Configurações</span>
+    <a href="cartoes.html" class="nav-link" id="nav-cartoes">
+      <span class="nav-link-icon">💳</span> Cartões
+    </a>
+    <a href="faturamento.html" class="nav-link">
+      <span class="nav-link-icon">📅</span> Faturamento
+    </a>
+
+    <div class="nav-bottom">
+      <div class="user-info" id="user-info-btn">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div style="flex:1;min-width:0">
+          <div class="user-name" id="user-name">Carregando...</div>
+          <div class="user-email" id="user-email"></div>
+        </div>
+        <span style="color:var(--text-muted);font-size:0.8rem" title="Sair">⏏️</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- Page Header -->
+    <div class="page-header">
+      <div class="page-title">
+        <h1>Dashboard</h1>
+        <p>Visão geral das suas finanças</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <!-- View Mode Selector -->
+        <div class="view-mode-selector" style="display:flex; background: rgba(255,255,255,0.05); border-radius: 8px; padding: 4px; gap: 4px;">
+          <style>
+            .view-btn { background: transparent; color: var(--text-muted); border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: all 0.2s ease; }
+            .view-btn:hover { color: var(--text-color); background: rgba(255,255,255,0.1); }
+            .view-btn.active { background: var(--primary); color: #FFF; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+          </style>
+          <button class="view-btn active" id="view-mode-total" data-mode="total">Total</button>
+          <button class="view-btn" id="view-mode-credito" data-mode="credito">Cartões</button>
+          <button class="view-btn" id="view-mode-boleto" data-mode="boleto">Boletos</button>
+        </div>
+        <!-- Year Navigation -->
+        <div class="month-nav">
+          <button class="month-nav-btn" id="prev-year" aria-label="Ano anterior">‹</button>
+          <div style="text-align:center">
+            <span class="month-nav-text" id="year-label">2026</span>
+          </div>
+          <button class="month-nav-btn" id="next-year" aria-label="Próximo ano">›</button>
+        </div>
+        <a href="lancamentos.html" class="btn btn-primary btn-sm">
+          ➕ Novo Lançamento
+        </a>
+      </div>
+    </div>
+
+    <!-- Modal: Detalhes da Fatura -->
+    <div class="modal-overlay" id="modal-fatura">
+      <div class="modal" style="max-width:500px">
+        <div class="modal-header">
+          <h2 class="modal-title" id="fatura-modal-title">Detalhes da Fatura</h2>
+          <button class="modal-close" id="fatura-modal-close" aria-label="Fechar">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div id="fatura-modal-list" style="display:flex; flex-direction:column; gap:8px">
+            <!-- Items injected by JS -->
+          </div>
+        </div>
+        <div class="modal-footer" style="justify-content:space-between; align-items:center">
+          <div style="font-weight:700; color:var(--text-primary)">
+            Total: <span id="fatura-modal-total" style="color:var(--danger-color)">R$ 0,00</span>
+          </div>
+          <button class="btn btn-secondary" id="fatura-modal-btn-fechar">Fechar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="quick-stats">
+      <div class="card stat-card red">
+        <div class="stat-card-icon">💸</div>
+        <div class="card-title">Despesas do Ano</div>
+        <div class="card-value" id="stat-despesas">R$ 0,00</div>
+        <div class="stat-card-change" id="stat-despesas-count">0 lançamentos</div>
+      </div>
+
+      <div class="card stat-card green">
+        <div class="stat-card-icon">💵</div>
+        <div class="card-title">Receitas do Ano</div>
+        <div class="card-value" id="stat-receitas">R$ 0,00</div>
+        <div class="stat-card-change" id="stat-receitas-count">0 lançamentos</div>
+      </div>
+
+      <div class="card stat-card purple">
+        <div class="stat-card-icon">📅</div>
+        <div class="card-title">Parcelas Futuras</div>
+        <div class="card-value" id="stat-parcelas">R$ 0,00</div>
+        <div class="stat-card-change" id="stat-parcelas-count">próximos meses</div>
+      </div>
+
+      <div class="card stat-card blue">
+        <div class="stat-card-icon">📈</div>
+        <div class="card-title">Saldo do Ano</div>
+        <div class="card-value" id="stat-saldo">R$ 0,00</div>
+        <div class="stat-card-change">receitas - despesas</div>
+      </div>
+    </div>
+
+    <!-- Content Grid -->
+    <div class="content-grid">
+      <!-- Left: Transactions + Chart -->
+      <div>
+        <!-- Faturas de Cartão / Boletos / Total -->
+        <div class="card" style="margin-bottom:var(--space-md)">
+          <!-- Section Total -->
+          <div id="section-total" style="display:none; margin-bottom: 24px;">
+            <div class="section-header">
+              <div class="section-title">
+                <span class="section-title-icon">📅</span>
+                <span>Despesas do Mês</span>
+              </div>
+            </div>
+            <div class="transaction-list" id="total-list" style="display:none"></div>
+            <div class="empty-state" id="total-empty" style="display:none">
+              <div class="empty-icon">🎉</div>
+              <div class="empty-title">Nenhuma despesa</div>
+              <div class="empty-desc">Nenhum gasto encontrado neste ano.</div>
+            </div>
+          </div>
+
+          <!-- Section Boletos -->
+          <div id="section-boletos" style="display:none; margin-bottom: 24px;">
+            <div class="section-header">
+              <div class="section-title">
+                <span class="section-title-icon">📄</span>
+                <span>Boletos Pendentes</span>
+              </div>
+            </div>
+            <div class="transaction-list" id="boletos-list" style="display:none"></div>
+            <div class="empty-state" id="boletos-empty" style="display:none">
+              <div class="empty-icon">📄</div>
+              <div class="empty-title">Nenhum boleto pendente</div>
+              <div class="empty-desc">Você não possui boletos pendentes neste momento.</div>
+            </div>
+          </div>
+
+          <!-- Section Faturas -->
+          <div id="section-faturas" style="display:none;">
+            <div class="section-header">
+              <div class="section-title">
+                <span class="section-title-icon">🧾</span>
+                <span>Faturas de Cartão</span>
+              </div>
+            </div>
+            <div id="transactions-loading" class="loading-overlay">
+              <div class="spinner"></div>
+            </div>
+            <div class="transaction-list" id="faturas-list" style="display:none"></div>
+            <div class="empty-state" id="faturas-empty" style="display:none">
+              <div class="empty-icon">💳</div>
+              <div class="empty-title">Nenhum cartão encontrado</div>
+              <div class="empty-desc">Adicione cartões para acompanhar as faturas.</div>
+              <a href="cartoes.html" class="btn btn-primary btn-sm">➕ Meus Cartões</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Charts + Card summary -->
+      <div style="display:flex;flex-direction:column;gap:var(--space-md)">
+        <!-- Category chart -->
+        <div class="card">
+          <div class="section-header" style="margin-bottom:var(--space-md); display:flex; justify-content:space-between; align-items:center;">
+            <div class="section-title" style="margin: 0;">
+              <span class="section-title-icon">📊</span>
+              Por Categoria
+            </div>
+            <style>
+              #chart-month-select option { background: #13111F; color: white; }
+            </style>
+            <select id="chart-month-select" style="background: rgba(255,255,255,0.05); color: var(--text-primary); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 4px 10px; font-size: 0.8rem; outline: none; cursor: pointer; appearance: none; -webkit-appearance: none; background-image: url('data:image/svg+xml;utf8,<svg fill=%22white%22 height=%2224%22 viewBox=%220 0 24 24%22 width=%2224%22 xmlns=%22http://www.w3.org/2000/svg%22><path d=%22M7 10l5 5 5-5z%22/></svg>'); background-repeat: no-repeat; background-position-x: 100%; background-position-y: center; padding-right: 24px; font-weight: 500;"></select>
+          </div>
+          <div class="chart-container" style="max-height:200px">
+            <canvas id="category-chart"></canvas>
+          </div>
+          <div class="chart-legend" id="category-legend"></div>
+          <div class="empty-state" id="chart-empty" style="display:none;padding:var(--space-md)">
+            <div class="empty-icon" style="font-size:2rem">📊</div>
+            <div class="empty-title">Sem dados</div>
+          </div>
+        </div>
+
+        <!-- Cards Summary -->
+        <div class="card">
+          <div class="section-header" style="margin-bottom:var(--space-md)">
+            <div class="section-title">
+              <span class="section-title-icon">💳</span>
+              Por Cartão
+            </div>
+            <a href="cartoes.html" class="btn btn-ghost btn-sm">Gerenciar</a>
+          </div>
+          <div id="cartoes-summary" class="transaction-list"></div>
+          <div class="empty-state" id="cartoes-empty" style="display:none;padding:var(--space-md)">
+            <div class="empty-icon" style="font-size:2rem">💳</div>
+            <div class="empty-title">Nenhum cartão</div>
+            <a href="cartoes.html" class="btn btn-ghost btn-sm" style="margin-top:8px">Adicionar cartão</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+  <!-- Modal Pagar Boleto -->
+  <div class="modal-overlay" id="modal-pagar-boleto">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Pagar Boleto</h2>
+        <button class="modal-close" id="pagar-boleto-close" aria-label="Fechar">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="form-pagar-boleto">
+          <input type="hidden" id="pagar-boleto-id">
+          <div class="form-group">
+            <label>Como você pagou esse boleto?</label>
+            <div class="payment-method-selector">
+              <label class="payment-method-card">
+                <input type="radio" name="pagar-boleto-forma" value="pix" checked>
+                <div class="card-content">
+                  <i class="fas fa-qrcode"></i>
+                  <span>PIX</span>
+                </div>
+              </label>
+              <label class="payment-method-card">
+                <input type="radio" name="pagar-boleto-forma" value="credito">
+                <div class="card-content">
+                  <i class="fas fa-credit-card"></i>
+                  <span>Cartão de Crédito</span>
+                </div>
+              </label>
+            </div>
+          </div>
+          <div class="form-group" id="pagar-boleto-cartao-group" style="display:none; margin-top: 16px;">
+            <label for="pagar-boleto-cartao">Qual cartão?</label>
+            <select id="pagar-boleto-cartao" class="form-select">
+              <!-- Preenchido via JS -->
+            </select>
+          </div>
+          <div class="form-group" style="margin-top: 16px;">
+            <label for="pagar-boleto-valor">Valor Pago (R$)</label>
+            <input type="number" id="pagar-boleto-valor" class="form-input" step="0.01" required>
+          </div>
+          <div class="form-group" style="margin-top: 16px;">
+            <label for="pagar-boleto-data">Data do Pagamento</label>
+            <input type="date" id="pagar-boleto-data" class="form-input" required>
+          </div>
+          <div class="form-actions" style="margin-top:24px">
+            <button type="button" class="btn btn-outline" id="pagar-boleto-cancel">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Confirmar Pagamento</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Month Details -->
+  <div class="modal-overlay" id="modal-mes-detalhes">
+    <div class="modal" style="max-width:500px">
+      <div class="modal-header">
+        <h2 class="modal-title" id="mes-detalhes-title">Detalhes do Mês</h2>
+        <button class="modal-close" id="mes-detalhes-close" aria-label="Fechar">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="mes-detalhes-body" style="display:flex; flex-direction:column; gap:8px">
+          <!-- Injetado via JS -->
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content:space-between; align-items:center">
+        <div style="font-weight:700; color:var(--text-primary)">
+          Total: <span id="mes-detalhes-total" style="color:var(--danger-color)">R$ 0,00</span>
+        </div>
+        <button class="btn btn-secondary" id="mes-detalhes-btn-fechar">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/dashboard.js" type="module"></script>
+</body>
+</html>

@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Controle de Gastos — Login</title>
+  <meta name="description" content="Controle suas finanças pessoais com Controle de Gastos. Faça login para acessar seu painel financeiro." />
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="css/global.css" />
+  <link rel="stylesheet" href="css/auth.css" />
+</head>
+<body>
+
+  <!-- Decorative orbs -->
+  <div class="auth-orb auth-orb-1"></div>
+  <div class="auth-orb auth-orb-2"></div>
+
+  <main class="auth-page">
+    <div class="auth-card">
+
+      <!-- Logo -->
+      <div class="auth-logo">
+        <div class="auth-logo-icon">💰</div>
+        <h1>Controle de Gastos</h1>
+        <p>Seu controle financeiro pessoal</p>
+      </div>
+
+      <!-- Tabs -->
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Entrar</button>
+        <button class="auth-tab" id="tab-register" onclick="switchTab('register')">Criar conta</button>
+      </div>
+
+      <!-- Error message -->
+      <div class="auth-error" id="auth-error">
+        <span>⚠️</span>
+        <span id="auth-error-msg">Erro ao autenticar.</span>
+      </div>
+
+      <!-- Login Form -->
+      <form class="auth-form" id="login-form" autocomplete="on">
+        <div class="form-group">
+          <label class="form-label" for="login-email">E-mail</label>
+          <input
+            class="form-input"
+            type="email"
+            id="login-email"
+            name="email"
+            placeholder="seu@email.com"
+            autocomplete="email"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="login-password">Senha</label>
+          <input
+            class="form-input"
+            type="password"
+            id="login-password"
+            name="password"
+            placeholder="••••••••"
+            autocomplete="current-password"
+            required
+          />
+        </div>
+
+        <button type="submit" class="btn btn-primary auth-submit btn-lg" id="login-btn">
+          <span class="btn-spinner"></span>
+          <span class="btn-text">Entrar</span>
+        </button>
+      </form>
+
+      <!-- Register Form (hidden) -->
+      <form class="auth-form" id="register-form" style="display:none;" autocomplete="on">
+        <div class="form-group">
+          <label class="form-label" for="reg-name">Seu nome</label>
+          <input
+            class="form-input"
+            type="text"
+            id="reg-name"
+            name="name"
+            placeholder="Igor Beloni"
+            autocomplete="name"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="reg-email">E-mail</label>
+          <input
+            class="form-input"
+            type="email"
+            id="reg-email"
+            name="email"
+            placeholder="seu@email.com"
+            autocomplete="email"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="reg-password">Senha</label>
+          <input
+            class="form-input"
+            type="password"
+            id="reg-password"
+            name="password"
+            placeholder="Mínimo 6 caracteres"
+            autocomplete="new-password"
+            minlength="6"
+            required
+          />
+        </div>
+
+        <button type="submit" class="btn btn-primary auth-submit btn-lg" id="register-btn">
+          <span class="btn-spinner"></span>
+          <span class="btn-text">Criar conta</span>
+        </button>
+      </form>
+
+      <p class="auth-footer">
+        Seus dados são armazenados com segurança no Firebase 🔒
+      </p>
+    </div>
+  </main>
+
+  <script type="module">
+    import { login, register, redirectIfLoggedIn } from './js/auth.js';
+
+    redirectIfLoggedIn('dashboard.html');
+
+    window.switchTab = function(tab) {
+      const loginForm    = document.getElementById('login-form');
+      const registerForm = document.getElementById('register-form');
+      const tabLogin     = document.getElementById('tab-login');
+      const tabRegister  = document.getElementById('tab-register');
+      const errorEl      = document.getElementById('auth-error');
+
+      errorEl.classList.remove('visible');
+
+      if (tab === 'login') {
+        loginForm.style.display = 'flex';
+        registerForm.style.display = 'none';
+        tabLogin.classList.add('active');
+        tabRegister.classList.remove('active');
+      } else {
+        loginForm.style.display = 'none';
+        registerForm.style.display = 'flex';
+        tabLogin.classList.remove('active');
+        tabRegister.classList.add('active');
+      }
+    };
+
+    function showError(msg) {
+      const errorEl = document.getElementById('auth-error');
+      document.getElementById('auth-error-msg').textContent = msg;
+      errorEl.classList.add('visible');
+    }
+
+    function setLoading(btn, loading) {
+      if (loading) btn.classList.add('loading');
+      else btn.classList.remove('loading');
+    }
+
+    function translateError(code) {
+      const map = {
+        'auth/user-not-found':       'E-mail não encontrado.',
+        'auth/wrong-password':       'Senha incorreta.',
+        'auth/email-already-in-use': 'E-mail já cadastrado.',
+        'auth/weak-password':        'Senha muito fraca (mínimo 6 caracteres).',
+        'auth/invalid-email':        'E-mail inválido.',
+        'auth/too-many-requests':    'Muitas tentativas. Tente novamente mais tarde.',
+        'auth/invalid-credential':   'E-mail ou senha incorretos.',
+      };
+      return map[code] || 'Ocorreu um erro. Tente novamente.';
+    }
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn   = document.getElementById('login-btn');
+      const email = document.getElementById('login-email').value;
+      const pass  = document.getElementById('login-password').value;
+
+      document.getElementById('auth-error').classList.remove('visible');
+      setLoading(btn, true);
+
+      try {
+        await login(email, pass);
+        window.location.href = 'dashboard.html';
+      } catch (err) {
+        showError(translateError(err.code));
+        setLoading(btn, false);
+      }
+    });
+
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn   = document.getElementById('register-btn');
+      const name  = document.getElementById('reg-name').value;
+      const email = document.getElementById('reg-email').value;
+      const pass  = document.getElementById('reg-password').value;
+
+      document.getElementById('auth-error').classList.remove('visible');
+      setLoading(btn, true);
+
+      try {
+        await register(email, pass, name);
+        window.location.href = 'dashboard.html';
+      } catch (err) {
+        showError(translateError(err.code));
+        setLoading(btn, false);
+      }
+    });
+  </script>
+</body>
+</html>
+

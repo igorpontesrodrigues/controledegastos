@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Controle de Gastos — Novo Lançamento</title>
+  <meta name="description" content="Adicione novos lançamentos financeiros — despesas de cartão de crédito com suporte a parcelamento." />
+  <link rel="stylesheet" href="css/global.css" />
+  <link rel="stylesheet" href="css/app.css" />
+</head>
+<body>
+
+  <!-- Mobile Header -->
+  <header class="mobile-header">
+    <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Menu">☰</button>
+    <span class="mobile-logo" style="display:flex;align-items:center;gap:8px;"><img src="favicon.png" style="width:24px; height:24px; border-radius:50%; object-fit:cover;"> Controle de Gastos</span>
+    <div style="width:32px"></div>
+  </header>
+  <div class="nav-overlay" id="nav-overlay"></div>
+
+  <!-- Sidebar -->
+  <nav class="nav-sidebar" id="nav-sidebar">
+    <div class="nav-logo">
+      <div class="nav-logo-icon" style="background:transparent; border:none; padding:0;"><img src="favicon.png" style="width:28px; height:28px; border-radius:50%; object-fit:cover;"></div>
+      <span class="nav-logo-text">Controle de Gastos</span>
+    </div>
+
+    <a href="lancamentos.html" class="nav-link active">
+      <span class="nav-link-icon">➕</span> Lançamentos
+    </a>
+
+    <span class="nav-section-title">Principal</span>
+    <a href="dashboard.html" class="nav-link">
+      <span class="nav-link-icon">📊</span> Dashboard
+    </a>
+    <a href="extrato.html" class="nav-link">
+      <span class="nav-link-icon">📋</span> Extrato
+    </a>
+
+    <span class="nav-section-title">Configurações</span>
+    <a href="cartoes.html" class="nav-link">
+      <span class="nav-link-icon">💳</span> Cartões
+    </a>
+    <a href="faturamento.html" class="nav-link">
+      <span class="nav-link-icon">📅</span> Faturamento
+    </a>
+
+    <div class="nav-bottom">
+      <div class="user-info" id="user-info-btn">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div style="flex:1;min-width:0">
+          <div class="user-name" id="user-name">Carregando...</div>
+          <div class="user-email" id="user-email"></div>
+        </div>
+        <span style="color:var(--text-muted);font-size:0.8rem">⏏️</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="form-page">
+      <div class="page-header">
+        <div class="page-title">
+          <h1>Novo Lançamento</h1>
+          <p>Registre uma despesa ou receita</p>
+        </div>
+        <a href="extrato.html" class="btn btn-ghost btn-sm">📋 Ver extrato</a>
+      </div>
+
+      <!-- Tipo: Despesa / Receita -->
+      <div class="form-section">
+        <div class="form-section-title">💡 Tipo de lançamento</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <button type="button" class="tipo-btn active" id="tipo-despesa" onclick="setTipo('despesa')">
+            <span style="font-size:1.4rem">💸</span>
+            <span style="font-weight:700">Despesa</span>
+            <span style="font-size:0.75rem;color:var(--text-muted)">Gasto no cartão</span>
+          </button>
+          <button type="button" class="tipo-btn" id="tipo-receita" onclick="setTipo('receita')">
+            <span style="font-size:1.4rem">💵</span>
+            <span style="font-weight:700">Receita</span>
+            <span style="font-size:0.75rem;color:var(--text-muted)">Entrada de dinheiro</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Formulário -->
+      <form id="lancamento-form" novalidate>
+
+        <!-- Info principal -->
+        <div class="form-section">
+          <div class="form-section-title">📝 Informações principais</div>
+
+          <div style="display:flex;flex-direction:column;gap:var(--space-md)">
+            <div class="form-group">
+              <label class="form-label" for="descricao">Descrição *</label>
+              <input class="form-input" type="text" id="descricao" placeholder="Ex: Netflix, Mercado, Restaurante..." required />
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="valor">Valor Total *</label>
+                <div class="input-prefix">
+                  <span>R$</span>
+                  <input class="form-input" type="number" id="valor" placeholder="0,00" min="0.01" step="0.01" required />
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="data">Data *</label>
+                <input class="form-input" type="date" id="data" required />
+              </div>
+            </div>
+
+            <!-- Forma de Pagamento -->
+            <div class="form-group">
+              <label class="form-label">Forma de Pagamento *</label>
+              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+                <button type="button" class="forma-btn active" id="forma-credito" onclick="setForma('credito')">
+                  <span style="font-size:1.2rem">💳</span>
+                  <span style="font-weight:700;font-size:0.88rem">Crédito</span>
+                </button>
+                <button type="button" class="forma-btn" id="forma-pix" onclick="setForma('pix')">
+                  <span style="font-size:1.2rem">⚡</span>
+                  <span style="font-weight:700;font-size:0.88rem">Pix</span>
+                </button>
+                <button type="button" class="forma-btn" id="forma-debito" onclick="setForma('debito')">
+                  <span style="font-size:1.2rem">🏦</span>
+                  <span style="font-weight:700;font-size:0.88rem">Débito</span>
+                </button>
+                <button type="button" class="forma-btn" id="forma-boleto" onclick="setForma('boleto')">
+                  <span style="font-size:1.2rem">📄</span>
+                  <span style="font-weight:700;font-size:0.88rem">Boleto</span>
+                </button>
+              </div>
+              <input type="hidden" id="forma-pagamento" value="credito" />
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="cartao-select" id="cartao-label">Cartão *</label>
+                <select class="form-select" id="cartao-select">
+                  <option value="">Selecione o cartão</option>
+                </select>
+              </div>
+              <div class="form-group" id="local-group">
+                <label class="form-label" for="local">Local / Estabelecimento</label>
+                <input class="form-input" type="text" id="local" placeholder="Ex: iFood, Shopping Morumbi..." />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Categoria -->
+        <div class="form-section" id="categoria-section">
+          <div class="form-section-title">🏷️ Categoria</div>
+          <div class="category-grid" id="category-grid"></div>
+          <input type="hidden" id="categoria" value="outros" />
+        </div>
+
+        <!-- Status de Pagamento -->
+        <div class="form-section" id="pago-section" style="display:none">
+          <div class="toggle-group" style="padding:16px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.05)">
+            <div>
+              <div class="toggle-label" style="display:flex;align-items:center;gap:8px">
+                ✅ Já foi pago?
+              </div>
+              <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px">Desmarque se for uma conta a pagar no futuro</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="pago-checkbox" checked />
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Parcelamento -->
+        <div class="form-section" id="parcela-section">
+          <div class="form-section-title">📅 Parcelamento</div>
+
+          <div class="toggle-group" style="margin-bottom:var(--space-md)">
+            <div>
+              <div class="toggle-label">É parcelado?</div>
+              <div style="font-size:0.75rem;color:var(--text-muted)">Ative para compras em parcelas</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="toggle-parcelado" />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div id="parcela-fields" style="display:none;flex-direction:column;gap:var(--space-md)">
+            <div class="form-row-3">
+              <div class="form-group">
+                <label class="form-label" for="total-parcelas">Total de parcelas</label>
+                <input class="form-input" type="number" id="total-parcelas" placeholder="Ex: 12" min="2" max="60" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="parcela-inicial">Começa na parcela</label>
+                <input class="form-input" type="number" id="parcela-inicial" placeholder="Ex: 1" min="1" value="1" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Valor Total</label>
+                <div class="form-input" id="valor-parcela-display" style="background:rgba(124,58,237,0.08);border-color:rgba(124,58,237,0.3);color:#A78BFA;font-weight:700">
+                  R$ —
+                </div>
+              </div>
+            </div>
+
+            <!-- Preview das parcelas -->
+            <div class="parcela-preview" id="parcela-preview">
+              <div class="parcela-preview-title">📋 Parcelas que serão criadas</div>
+              <div class="parcela-preview-list" id="parcela-preview-list"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Obs opcional -->
+        <div class="form-section">
+          <div class="form-section-title">💬 Observação (opcional)</div>
+          <div class="form-group">
+            <textarea class="form-textarea" id="observacao" placeholder="Alguma nota adicional sobre este lançamento..."></textarea>
+          </div>
+        </div>
+
+        <!-- Error -->
+        <div class="auth-error" id="form-error">
+          <span>⚠️</span>
+          <span id="form-error-msg">Preencha todos os campos obrigatórios.</span>
+        </div>
+
+        <!-- Submit -->
+        <div style="display:flex;gap:var(--space-md);justify-content:flex-end;margin-top:var(--space-md)">
+          <a href="extrato.html" class="btn btn-ghost">Cancelar</a>
+          <button type="submit" class="btn btn-primary" id="submit-btn" style="min-width:160px">
+            <span class="btn-spinner"></span>
+            <span class="btn-text">✅ Salvar lançamento</span>
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </main>
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+  <style>
+    .tipo-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 16px;
+      border-radius: var(--radius-md);
+      border: 1.5px solid var(--border);
+      background: var(--bg-input);
+      cursor: pointer;
+      transition: all var(--transition);
+      font-family: 'Inter', sans-serif;
+      color: var(--text-secondary);
+    }
+    .tipo-btn:hover {
+      border-color: var(--border-active);
+    }
+    .tipo-btn.active {
+      border-color: var(--accent-purple);
+      background: rgba(124, 58, 237, 0.12);
+      color: var(--text-primary);
+    }
+    #parcela-fields { display: flex; }
+    .forma-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 14px 10px;
+      border-radius: var(--radius-md);
+      border: 1.5px solid var(--border);
+      background: var(--bg-input);
+      cursor: pointer;
+      transition: all var(--transition);
+      font-family: 'Inter', sans-serif;
+      color: var(--text-secondary);
+    }
+    .forma-btn:hover { border-color: var(--border-active); }
+    .forma-btn.active {
+      border-color: var(--accent-purple);
+      background: rgba(124, 58, 237, 0.12);
+      color: var(--text-primary);
+    }
+  </style>
+
+  <script type="module" src="js/lancamentos.js"></script>
+</body>
+</html>
