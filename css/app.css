@@ -129,6 +129,37 @@
   flex-direction: column;
   gap: var(--space-sm);
   margin-top: var(--space-md);
+  max-height: 180px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+#fatura-modal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.chart-legend::-webkit-scrollbar,
+#fatura-modal-list::-webkit-scrollbar {
+  width: 6px;
+}
+.chart-legend::-webkit-scrollbar-track,
+#fatura-modal-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 4px;
+}
+.chart-legend::-webkit-scrollbar-thumb,
+#fatura-modal-list::-webkit-scrollbar-thumb {
+  background: rgba(167, 139, 250, 0.3);
+  border-radius: 4px;
+}
+.chart-legend::-webkit-scrollbar-thumb:hover,
+#fatura-modal-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(167, 139, 250, 0.5);
 }
 
 .chart-legend-item {

@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Controle de Gastos — Categorias</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <meta name="description" content="Gerencie as categorias de gastos no Controle de Gastos." />
+  <link rel="stylesheet" href="css/global.css" />
+  <link rel="stylesheet" href="css/app.css" />
+  <style>
+    .cat-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      transition: all var(--transition-fast);
+      min-width: 0;
+      overflow: hidden;
+    }
+    .cat-card:hover {
+      border-color: var(--primary-light);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .cat-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      flex: 1;
+    }
+    .cat-icon-badge {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      flex-shrink: 0;
+    }
+    .cat-label-text {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .cat-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+      margin-left: 8px;
+    }
+    .cat-action-btn {
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s;
+      flex-shrink: 0;
+      font-size: 0.85rem;
+    }
+    .cat-action-btn:hover:not(:disabled) {
+      background: rgba(124, 58, 237, 0.2);
+      border-color: #7C3AED;
+      color: white;
+      transform: scale(1.08);
+    }
+    .cat-action-btn.delete-btn:hover:not(:disabled) {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: #F87171;
+      color: #F87171;
+    }
+    .cat-action-btn:disabled {
+      opacity: 0.2;
+      cursor: default;
+      border-color: transparent;
+      background: transparent;
+    }
+    .emoji-preset-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+      margin-top: 6px;
+    }
+    .emoji-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 6px;
+      font-size: 1.25rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .emoji-btn:hover, .emoji-btn.selected {
+      background: rgba(124, 58, 237, 0.2);
+      border-color: #7C3AED;
+      transform: scale(1.1);
+    }
+    .color-preset-grid {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .color-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .color-btn:hover, .color-btn.selected {
+      transform: scale(1.2);
+      border-color: #fff;
+      box-shadow: 0 0 8px rgba(255,255,255,0.5);
+    }
+    .tab-toggle-btn {
+      padding: 8px 18px;
+      border-radius: 8px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: transparent;
+      color: var(--text-muted);
+    }
+    .tab-toggle-btn.active {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(124, 58, 237, 0.4);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Mobile Header -->
+  <header class="mobile-header">
+    <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Menu">☰</button>
+    <span class="mobile-logo" style="display:flex;align-items:center;gap:8px;"><img src="favicon.png" style="width:24px; height:24px; border-radius:50%; object-fit:cover;"> Controle de Gastos</span>
+    <div style="width:32px"></div>
+  </header>
+  <div class="nav-overlay" id="nav-overlay"></div>
+
+  <!-- Sidebar -->
+  <nav class="nav-sidebar" id="nav-sidebar">
+    <div class="nav-logo">
+      <div class="nav-logo-icon" style="background:transparent; border:none; padding:0;"><img src="favicon.png" style="width:28px; height:28px; border-radius:50%; object-fit:cover;"></div>
+      <span class="nav-logo-text">Controle de Gastos</span>
+    </div>
+
+    <a href="lancamentos.html" class="nav-link">
+      <span class="nav-link-icon">➕</span> Lançamentos
+    </a>
+
+    <span class="nav-section-title">Principal</span>
+    <a href="dashboard.html" class="nav-link">
+      <span class="nav-link-icon">📊</span> Dashboard
+    </a>
+    <a href="extrato.html" class="nav-link">
+      <span class="nav-link-icon">📋</span> Extrato
+    </a>
+
+    <span class="nav-section-title">Configurações</span>
+    <a href="cartoes.html" class="nav-link">
+      <span class="nav-link-icon">💳</span> Cartões
+    </a>
+    <a href="faturamento.html" class="nav-link">
+      <span class="nav-link-icon">📅</span> Faturamento
+    </a>
+    <a href="categorias.html" class="nav-link active">
+      <span class="nav-link-icon">🏷️</span> Categorias
+    </a>
+
+    <div class="nav-bottom">
+      <div class="user-info" id="user-info-btn">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div style="flex:1;min-width:0">
+          <div class="user-name" id="user-name">Carregando...</div>
+          <div class="user-email" id="user-email"></div>
+        </div>
+        <span style="color:var(--text-muted);font-size:0.8rem">⏏️</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="page-header">
+      <div class="page-title">
+        <h1>Categorias</h1>
+        <p>Gerencie, edite ou ordene as categorias de suas receitas e despesas</p>
+      </div>
+      <button class="btn btn-primary" id="btn-add-categoria">
+        ➕ Nova Categoria
+      </button>
+    </div>
+
+    <!-- Tabs Despesa vs Receita -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-lg); flex-wrap:wrap; gap:12px;">
+      <div style="display:flex; background:var(--bg-card); padding:4px; border-radius:10px; border:1px solid var(--border-color);">
+        <button class="tab-toggle-btn active" id="tab-despesa" onclick="switchCatTab('despesa')">💸 Despesas</button>
+        <button class="tab-toggle-btn" id="tab-receita" onclick="switchCatTab('receita')">💰 Receitas</button>
+      </div>
+      <div style="font-size:0.85rem; color:var(--text-muted); display:flex; align-items:center; gap:6px;">
+        <span>💡 Use as setas</span>
+        <span style="background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px; border:1px solid var(--border-color);">⬆️</span>
+        <span style="background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px; border:1px solid var(--border-color);">⬇️</span>
+        <span>para organizar a ordem no menu</span>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div class="loading-overlay" id="categorias-loading">
+      <div class="spinner"></div>
+    </div>
+
+    <!-- Grid -->
+    <div class="cards-grid" id="categorias-grid" style="display:none; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--space-md);"></div>
+  </main>
+
+  <!-- Modal: Adicionar/Editar Categoria -->
+  <div class="modal-overlay" id="modal-categoria">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-title">Nova Categoria</h3>
+        <button class="modal-close" id="modal-close-btn" aria-label="Fechar">&times;</button>
+      </div>
+
+      <form id="categoria-form" novalidate style="display:flex;flex-direction:column;gap:var(--space-md)">
+        <input type="hidden" id="categoria-id" />
+        <input type="hidden" id="categoria-tipo" value="despesa" />
+
+        <div class="form-group">
+          <label class="form-label" for="categoria-nome">Nome da Categoria *</label>
+          <input class="form-input" type="text" id="categoria-nome" placeholder="Ex: Academia, Investimentos..." required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="categoria-icon">Ícone / Emoji *</label>
+          <input class="form-input" type="text" id="categoria-icon" placeholder="Ex: 🏋️‍♂️ ou clique abaixo" maxlength="4" required style="width: 80px; text-align: center; font-size: 1.5rem;" />
+          <div class="emoji-preset-grid" id="emoji-presets">
+            <button type="button" class="emoji-btn" data-emoji="🍔">🍔</button>
+            <button type="button" class="emoji-btn" data-emoji="🚗">🚗</button>
+            <button type="button" class="emoji-btn" data-emoji="🏥">🏥</button>
+            <button type="button" class="emoji-btn" data-emoji="🏠">🏠</button>
+            <button type="button" class="emoji-btn" data-emoji="📚">📚</button>
+            <button type="button" class="emoji-btn" data-emoji="✈️">✈️</button>
+            <button type="button" class="emoji-btn" data-emoji="🛍️">🛍️</button>
+            <button type="button" class="emoji-btn" data-emoji="💰">💰</button>
+            <button type="button" class="emoji-btn" data-emoji="📈">📈</button>
+            <button type="button" class="emoji-btn" data-emoji="💻">💻</button>
+            <button type="button" class="emoji-btn" data-emoji="🎁">🎁</button>
+            <button type="button" class="emoji-btn" data-emoji="↩️">↩️</button>
+            <button type="button" class="emoji-btn" data-emoji="🎮">🎮</button>
+            <button type="button" class="emoji-btn" data-emoji="📺">📺</button>
+            <button type="button" class="emoji-btn" data-emoji="🐾">🐾</button>
+            <button type="button" class="emoji-btn" data-emoji="💅">💅</button>
+            <button type="button" class="emoji-btn" data-emoji="🏋️">🏋️</button>
+            <button type="button" class="emoji-btn" data-emoji="💼">💼</button>
+            <button type="button" class="emoji-btn" data-emoji="👶">👶</button>
+            <button type="button" class="emoji-btn" data-emoji="🐶">🐶</button>
+            <button type="button" class="emoji-btn" data-emoji="💡">💡</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Cor de Destaque</label>
+          <div class="color-preset-grid" id="color-presets">
+            <div class="color-btn" style="background:#F59E0B" data-color="#F59E0B"></div>
+            <div class="color-btn" style="background:#FB923C" data-color="#FB923C"></div>
+            <div class="color-btn" style="background:#3B82F6" data-color="#3B82F6"></div>
+            <div class="color-btn" style="background:#8B5CF6" data-color="#8B5CF6"></div>
+            <div class="color-btn" style="background:#10B981" data-color="#10B981"></div>
+            <div class="color-btn" style="background:#EC4899" data-color="#EC4899"></div>
+            <div class="color-btn" style="background:#F97316" data-color="#F97316"></div>
+            <div class="color-btn" style="background:#06B6D4" data-color="#06B6D4"></div>
+            <div class="color-btn" style="background:#6366F1" data-color="#6366F1"></div>
+            <div class="color-btn" style="background:#14B8A6" data-color="#14B8A6"></div>
+            <div class="color-btn" style="background:#84CC16" data-color="#84CC16"></div>
+            <div class="color-btn" style="background:#F43F5E" data-color="#F43F5E"></div>
+            <div class="color-btn" style="background:#F472B6" data-color="#F472B6"></div>
+            <div class="color-btn" style="background:#94A3B8" data-color="#94A3B8"></div>
+            <div class="color-btn" style="background:#EF4444" data-color="#EF4444"></div>
+            <div class="color-btn" style="background:#A855F7" data-color="#A855F7"></div>
+          </div>
+          <input type="hidden" id="categoria-color" value="#8B5CF6" />
+        </div>
+
+        <div class="auth-error" id="categoria-error" style="margin-top:0">
+          <span>⚠️</span>
+          <span id="categoria-error-msg">Preencha o nome e o ícone.</span>
+        </div>
+
+        <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:8px">
+          <button type="button" class="btn btn-ghost" id="modal-cancel-btn">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="categoria-submit-btn" style="min-width:130px">
+            <span class="btn-spinner"></span>
+            <span class="btn-text">💾 Salvar</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast-container"></div>
+
+  <script type="module" src="js/categorias.js"></script>
+</body>
+</html>

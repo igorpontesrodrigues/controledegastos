@@ -472,21 +472,124 @@ export function formatMonth(year, month) {
 }
 
 export const CATEGORIAS = [
-  { id: 'alimentacao',   label: 'Alimentação',   icon: '🍔', color: '#F59E0B' },
-  { id: 'lanches',       label: 'Lanches',       icon: '🌭', color: '#FB923C' },
-  { id: 'transporte',    label: 'Transporte',     icon: '🚗', color: '#3B82F6' },
-  { id: 'lazer',         label: 'Lazer',          icon: '🎮', color: '#8B5CF6' },
-  { id: 'saude',         label: 'Saúde',          icon: '🏥', color: '#10B981' },
-  { id: 'assinaturas',   label: 'Assinaturas',    icon: '📺', color: '#EC4899' },
-  { id: 'compras',       label: 'Compras',        icon: '🛍️', color: '#F97316' },
-  { id: 'moradia',       label: 'Moradia',        icon: '🏠', color: '#06B6D4' },
-  { id: 'educacao',      label: 'Educação',       icon: '📚', color: '#6366F1' },
-  { id: 'viagem',        label: 'Viagem',         icon: '✈️', color: '#14B8A6' },
-  { id: 'pets',          label: 'Pets',           icon: '🐾', color: '#84CC16' },
-  { id: 'beleza',        label: 'Beleza',         icon: '💅', color: '#F43F5E' },
-  { id: 'casal',         label: 'Casal',          icon: '💑', color: '#F472B6' },
-  { id: 'outros',        label: 'Outros',         icon: '📦', color: '#94A3B8' },
+  // Despesas
+  { id: 'alimentacao',   label: 'Alimentação',   icon: '🍔', color: '#F59E0B', tipo: 'despesa', ordem: 0 },
+  { id: 'lanches',       label: 'Lanches',       icon: '🌭', color: '#FB923C', tipo: 'despesa', ordem: 10 },
+  { id: 'transporte',    label: 'Transporte',     icon: '🚗', color: '#3B82F6', tipo: 'despesa', ordem: 20 },
+  { id: 'lazer',         label: 'Lazer',          icon: '🎮', color: '#8B5CF6', tipo: 'despesa', ordem: 30 },
+  { id: 'saude',         label: 'Saúde',          icon: '🏥', color: '#10B981', tipo: 'despesa', ordem: 40 },
+  { id: 'assinaturas',   label: 'Assinaturas',    icon: '📺', color: '#EC4899', tipo: 'despesa', ordem: 50 },
+  { id: 'compras',       label: 'Compras',        icon: '🛍️', color: '#F97316', tipo: 'despesa', ordem: 60 },
+  { id: 'moradia',       label: 'Moradia',        icon: '🏠', color: '#06B6D4', tipo: 'despesa', ordem: 70 },
+  { id: 'educacao',      label: 'Educação',       icon: '📚', color: '#6366F1', tipo: 'despesa', ordem: 80 },
+  { id: 'viagem',        label: 'Viagem',         icon: '✈️', color: '#14B8A6', tipo: 'despesa', ordem: 90 },
+  { id: 'pets',          label: 'Pets',           icon: '🐾', color: '#84CC16', tipo: 'despesa', ordem: 100 },
+  { id: 'beleza',        label: 'Beleza',         icon: '💅', color: '#F43F5E', tipo: 'despesa', ordem: 110 },
+  { id: 'casal',         label: 'Casal',          icon: '💑', color: '#F472B6', tipo: 'despesa', ordem: 120 },
+  { id: 'outros',        label: 'Outros',         icon: '📦', color: '#94A3B8', tipo: 'despesa', ordem: 130 },
+  // Receitas
+  { id: 'rec_salario',       label: 'Salário',           icon: '💰', color: '#10B981', tipo: 'receita', ordem: 0 },
+  { id: 'rec_investimentos', label: 'Investimentos',     icon: '📈', color: '#3B82F6', tipo: 'receita', ordem: 10 },
+  { id: 'rec_freelance',     label: 'Freelance / Extra', icon: '💻', color: '#8B5CF6', tipo: 'receita', ordem: 20 },
+  { id: 'rec_presentes',     label: 'Presentes / Bônus', icon: '🎁', color: '#F59E0B', tipo: 'receita', ordem: 30 },
+  { id: 'rec_imoveis',       label: 'Aluguel / Imóveis', icon: '🏠', color: '#06B6D4', tipo: 'receita', ordem: 40 },
+  { id: 'rec_reembolso',     label: 'Reembolso',         icon: '↩️', color: '#14B8A6', tipo: 'receita', ordem: 50 },
+  { id: 'rec_outros',        label: 'Outras Receitas',   icon: '📦', color: '#94A3B8', tipo: 'receita', ordem: 60 }
 ];
+
+export async function loadCategorias(userId) {
+  if (!userId) return CATEGORIAS;
+  const q = query(collection(db, 'users', userId, 'categorias'));
+  const snap = await getDocs(q);
+  
+  if (snap.empty) {
+    const batch = writeBatch(db);
+    for (const cat of CATEGORIAS) {
+      const ref = doc(db, 'users', userId, 'categorias', cat.id);
+      batch.set(ref, {
+        label: cat.label,
+        icon: cat.icon,
+        color: cat.color,
+        tipo: cat.tipo,
+        ordem: cat.ordem,
+        criadoEm: Timestamp.now()
+      });
+    }
+    await batch.commit();
+    return CATEGORIAS;
+  }
+
+  const custom = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  
+  // Seed receita categories if user upgraded and doesn't have any receita categories yet
+  if (!custom.some(c => c.tipo === 'receita')) {
+    const batch = writeBatch(db);
+    const recs = CATEGORIAS.filter(c => c.tipo === 'receita');
+    for (const cat of recs) {
+      const ref = doc(db, 'users', userId, 'categorias', cat.id);
+      batch.set(ref, {
+        label: cat.label,
+        icon: cat.icon,
+        color: cat.color,
+        tipo: cat.tipo,
+        ordem: cat.ordem,
+        criadoEm: Timestamp.now()
+      });
+      custom.push(cat);
+    }
+    await batch.commit();
+  }
+
+  CATEGORIAS.length = 0;
+  custom.forEach((c, idx) => {
+    CATEGORIAS.push({
+      id: c.id,
+      label: c.label,
+      icon: c.icon,
+      color: c.color,
+      tipo: c.tipo || 'despesa',
+      ordem: c.ordem !== undefined ? c.ordem : idx * 10
+    });
+  });
+
+  CATEGORIAS.sort((a, b) => (a.ordem - b.ordem) || a.label.localeCompare(b.label));
+  return CATEGORIAS;
+}
+
+export async function saveCategoria(userId, catId, data) {
+  const ref = doc(db, 'users', userId, 'categorias', catId);
+  await setDoc(ref, {
+    label: data.label,
+    icon: data.icon,
+    color: data.color,
+    tipo: data.tipo || 'despesa',
+    ordem: data.ordem !== undefined ? data.ordem : 999,
+    updatedAt: Timestamp.now()
+  }, { merge: true });
+}
+
+export async function reorderCategorias(userId, orderedList) {
+  const batch = writeBatch(db);
+  orderedList.forEach((c, idx) => {
+    c.ordem = idx * 10;
+    const ref = doc(db, 'users', userId, 'categorias', c.id);
+    batch.set(ref, { 
+      ordem: c.ordem,
+      label: c.label,
+      icon: c.icon || '📦',
+      color: c.color || '#94A3B8',
+      tipo: c.tipo || 'despesa'
+    }, { merge: true });
+  });
+  await batch.commit();
+  CATEGORIAS.sort((a, b) => (a.ordem - b.ordem) || a.label.localeCompare(b.label));
+}
+
+export async function deleteCategoria(userId, catId) {
+  await deleteDoc(doc(db, 'users', userId, 'categorias', catId));
+  const idx = CATEGORIAS.findIndex(c => c.id === catId);
+  if (idx !== -1) CATEGORIAS.splice(idx, 1);
+}
 
 export const BANDEIRAS = ['Visa', 'Mastercard', 'Elo', 'Amex', 'Hipercard', 'Outro'];
 
@@ -502,5 +605,5 @@ export const CORES_CARTAO = [
 ];
 
 export function getCategoriaById(id) {
-  return CATEGORIAS.find(c => c.id === id) || CATEGORIAS[CATEGORIAS.length - 1];
+  return CATEGORIAS.find(c => c.id === id) || { id: id || 'outros', label: 'Outros', icon: '📦', color: '#94A3B8', tipo: 'despesa' };
 }

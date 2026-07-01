@@ -47,6 +47,9 @@
     <a href="faturamento.html" class="nav-link">
       <span class="nav-link-icon">📅</span> Faturamento
     </a>
+    <a href="categorias.html" class="nav-link">
+      <span class="nav-link-icon">🏷️</span> Categorias
+    </a>
 
     <div class="nav-bottom">
       <div class="user-info" id="user-info-btn">
@@ -103,7 +106,7 @@
           <button class="modal-close" id="fatura-modal-close" aria-label="Fechar">&times;</button>
         </div>
         <div class="modal-body">
-          <div id="fatura-modal-list" style="display:flex; flex-direction:column; gap:8px">
+          <div id="fatura-modal-list">
             <!-- Items injected by JS -->
           </div>
         </div>
@@ -228,23 +231,6 @@
           <div class="empty-state" id="chart-empty" style="display:none;padding:var(--space-md)">
             <div class="empty-icon" style="font-size:2rem">📊</div>
             <div class="empty-title">Sem dados</div>
-          </div>
-        </div>
-
-        <!-- Cards Summary -->
-        <div class="card">
-          <div class="section-header" style="margin-bottom:var(--space-md)">
-            <div class="section-title">
-              <span class="section-title-icon">💳</span>
-              Por Cartão
-            </div>
-            <a href="cartoes.html" class="btn btn-ghost btn-sm">Gerenciar</a>
-          </div>
-          <div id="cartoes-summary" class="transaction-list"></div>
-          <div class="empty-state" id="cartoes-empty" style="display:none;padding:var(--space-md)">
-            <div class="empty-icon" style="font-size:2rem">💳</div>
-            <div class="empty-title">Nenhum cartão</div>
-            <a href="cartoes.html" class="btn btn-ghost btn-sm" style="margin-top:8px">Adicionar cartão</a>
           </div>
         </div>
       </div>

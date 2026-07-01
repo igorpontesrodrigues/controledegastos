@@ -3,7 +3,7 @@ import { requireAuth, logout, getUserInitials } from './auth.js';
 import {
   getLancamentosByDateRange, getCartoes, getCiclosMap, getBillingDateRange, findBillingMonthForDate,
   updateLancamento, deleteLancamento, deleteGrupoParcelas, updateGrupoParcelasFields,
-  formatCurrency, formatDate, formatMonth, getCategoriaById, CATEGORIAS
+  formatCurrency, formatDate, formatMonth, getCategoriaById, CATEGORIAS, loadCategorias
 } from './db.js';
 
 // ── State ──
@@ -51,10 +51,12 @@ async function init() {
   document.getElementById('filter-status').addEventListener('change', applyFilters);
 
   // Populate category filter
+  await loadCategorias(currentUser.uid);
   const catSelect = document.getElementById('filter-cat');
-  CATEGORIAS.forEach(c => {
-    catSelect.innerHTML += `<option value="${c.id}">${c.icon} ${c.label}</option>`;
-  });
+  const desp = CATEGORIAS.filter(c => (c.tipo || 'despesa') === 'despesa');
+  const rec = CATEGORIAS.filter(c => c.tipo === 'receita');
+  catSelect.innerHTML += `<optgroup label="Despesas">${desp.map(c => `<option value="${c.id}">${c.icon} ${c.label}</option>`).join('')}</optgroup>`;
+  catSelect.innerHTML += `<optgroup label="Receitas">${rec.map(c => `<option value="${c.id}">${c.icon} ${c.label}</option>`).join('')}</optgroup>`;
 
   // Edit form submit
   document.getElementById('edit-form').addEventListener('submit', handleEditSubmit);
@@ -367,6 +369,7 @@ window.editSetTipo = function(tipo) {
   if (pagoSection) {
     pagoSection.style.display = (editSelectedForma === 'credito' || tipo === 'receita') ? 'none' : 'block';
   }
+  renderEditCategories();
 };
 
 window.editSetForma = function(forma) {
@@ -384,8 +387,13 @@ window.editSetForma = function(forma) {
 };
 
 function renderEditCategories() {
+  const filtered = CATEGORIAS.filter(cat => (cat.tipo || 'despesa') === editSelectedTipo);
+  if (!filtered.some(c => c.id === editSelectedCat) && filtered.length > 0) {
+    editSelectedCat = filtered[0].id;
+    document.getElementById('edit-categoria').value = editSelectedCat;
+  }
   const grid = document.getElementById('edit-category-grid');
-  grid.innerHTML = CATEGORIAS.map(cat => `
+  grid.innerHTML = filtered.map(cat => `
     <div
       class="category-option ${cat.id === editSelectedCat ? 'selected' : ''}"
       data-cat="${cat.id}"

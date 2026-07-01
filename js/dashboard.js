@@ -2,7 +2,7 @@
 import { requireAuth, logout, getUserInitials } from './auth.js';
 import {
   getLancamentosByDateRange, getAllLancamentos, getCartoes, getCiclosMap, getBillingDateRange, findBillingMonthForDate,
-  formatCurrency, formatDate, formatMonth, getCategoriaById, CATEGORIAS, updateLancamento
+  formatCurrency, formatDate, formatMonth, getCategoriaById, CATEGORIAS, updateLancamento, loadCategorias
 } from './db.js';
 
 // ── State ──
@@ -80,6 +80,7 @@ async function init() {
   try {
     await loadCartoes();
     ciclosMap = await getCiclosMap(currentUser.uid);
+    await loadCategorias(currentUser.uid);
   } catch (err) {
     console.error('Erro ao carregar configurações iniciais (Cartões/Ciclos):', err);
     // Continue execution so buttons still work
@@ -206,27 +207,30 @@ function applyViewMode() {
 
 // ── Update Stats ──
 async function updateStats() {
-  // Apenas itens ativos
-  const ativos = lancamentos.filter(l => l.status !== 'cancelado');
-  const despesas = ativos.filter(l => l.tipo === 'despesa');
-  const receitas = ativos.filter(l => l.tipo === 'receita');
+  // O resumo financeiro do ano (Receitas, Despesas e Saldo) no topo do Dashboard deve SEMPRE refletir
+  // o fluxo de caixa real (dinheiro em conta) do ano atual, ignorando gastos no cartão de crédito
+  // e boletos pendentes ainda não pagos, independentemente da aba selecionada (Total, Cartões ou Boletos).
+  const ativosDoAno = allLancamentosGlob.filter(l => {
+    if (l.status === 'cancelado') return false;
+    const d = l.data.toDate ? l.data.toDate() : new Date(l.data);
+    return d.getFullYear() === currentYear;
+  });
 
-  let despesasPagas, receitasPagas;
+  const despesasPagas = ativosDoAno.filter(l => 
+    l.tipo === 'despesa' && 
+    l.pago !== false && 
+    l.formaPagamento !== 'credito' && 
+    l.formaPagamento !== 'cartao_credito' && 
+    (!l.cartaoId || l.formaPagamento === 'boleto' || l.formaPagamento === 'pix' || l.formaPagamento === 'dinheiro')
+  );
 
-  if (currentViewMode === 'credito') {
-    // Show all credit card expenses (whether paid or not)
-    despesasPagas = despesas;
-    receitasPagas = receitas;
-  } else if (currentViewMode === 'boleto') {
-    // Boletos costumam ser pagos depois, vamos mostrar todos (pagos ou não) para dar a noção do total de boletos do ano
-    despesasPagas = despesas;
-    receitasPagas = receitas;
-  } else {
-    // Fluxo de caixa Total: reflete apenas o dinheiro real (pagos).
-    // Ignora gastos no crédito que ainda não foram pagos.
-    despesasPagas = despesas.filter(l => l.pago !== false && l.formaPagamento !== 'credito' && l.formaPagamento !== 'cartao_credito' && (!l.cartaoId || l.formaPagamento === 'boleto' || l.formaPagamento === 'pix' || l.formaPagamento === 'dinheiro'));
-    receitasPagas = receitas.filter(l => l.pago !== false && l.formaPagamento !== 'credito' && l.formaPagamento !== 'cartao_credito' && (!l.cartaoId || l.formaPagamento === 'boleto' || l.formaPagamento === 'pix' || l.formaPagamento === 'dinheiro'));
-  }
+  const receitasPagas = ativosDoAno.filter(l => 
+    l.tipo === 'receita' && 
+    l.pago !== false && 
+    l.formaPagamento !== 'credito' && 
+    l.formaPagamento !== 'cartao_credito' && 
+    (!l.cartaoId || l.formaPagamento === 'boleto' || l.formaPagamento === 'pix' || l.formaPagamento === 'dinheiro')
+  );
 
   const totalDespesas = despesasPagas.reduce((s, l) => s + l.valor, 0);
   const totalReceitas = receitasPagas.reduce((s, l) => s + l.valor, 0);
@@ -568,6 +572,9 @@ function renderFaturas() {
   const creditos = allLancamentosGlob.filter(l => l.status !== 'cancelado' && (l.formaPagamento === 'credito' || l.formaPagamento === 'cartao_credito' || (l.cartaoId && l.formaPagamento !== 'boleto' && l.formaPagamento !== 'pix' && l.formaPagamento !== 'dinheiro')) && l.tipo === 'despesa');
   
   const faturasPorMes = {};
+  for (let m = 0; m < 12; m++) {
+    faturasPorMes[m] = [];
+  }
   
   creditos.forEach(l => {
     const d = l.data.toDate ? l.data.toDate() : new Date(l.data);
@@ -578,11 +585,20 @@ function renderFaturas() {
     }
   });
   
-  const mesesOrdenados = Object.keys(faturasPorMes).sort((a,b) => a - b);
+  const mesesComDespesa = Object.keys(faturasPorMes).filter(mesStr => {
+    const lancs = faturasPorMes[parseInt(mesStr)];
+    const total = lancs.reduce((s, l) => s + l.valor, 0);
+    return total > 0;
+  }).sort((a,b) => a - b);
   
-  if (mesesOrdenados.length === 0) {
+  if (mesesComDespesa.length === 0) {
     faturasList.style.display = 'none';
     empty.style.display = 'flex';
+    empty.innerHTML = `
+      <div class="empty-icon">💳</div>
+      <div class="empty-title">Nenhuma fatura no período</div>
+      <div class="empty-desc">Você não possui despesas registradas no cartão de crédito em ${currentYear}.</div>
+    `;
     return;
   }
   
@@ -596,7 +612,7 @@ function renderFaturas() {
   // Store globally so the modal can access it
   window._faturasCurrentYear = faturasPorMes;
   
-  faturasList.innerHTML = mesesOrdenados.map(mesStr => {
+  faturasList.innerHTML = mesesComDespesa.map(mesStr => {
     const mes = parseInt(mesStr);
     const lancsMes = faturasPorMes[mes];
     const total = lancsMes.reduce((s,l) => s + l.valor, 0);
@@ -662,6 +678,7 @@ function renderFaturas() {
     const todayBillingState = findBillingMonthForDate(todayDate, ciclosMap);
     
     const isCurrentUi = (todayBillingState.year === currentYear && todayBillingState.month === mes);
+    const isClosed = (todayBillingState.year > currentYear || (todayBillingState.year === currentYear && todayBillingState.month > mes));
     const borderStyle = isCurrentUi ? 'border: 1px solid var(--primary-color); background: rgba(59, 130, 246, 0.05);' : 'border: 1px solid rgba(255,255,255,0.05);';
     const currentBadge = isCurrentUi ? '<span class="badge badge-purple" style="font-size:0.7rem; padding: 2px 6px; margin-left: 8px;">Fatura Atual</span>' : '';
     
@@ -696,13 +713,17 @@ function renderFaturas() {
           <div class="transaction-amount expense" style="font-size:1.1rem; font-weight:700; color: ${valueColor};">
             ${formatCurrency(total)}
           </div>
-          ${isPaid ? `
+          ${total === 0 ? `
+            <span class="badge" style="background:rgba(255,255,255,0.05); color:var(--text-muted); padding: 4px 10px; border: 1px solid rgba(255,255,255,0.1);">Sem Gastos</span>
+          ` : (isPaid ? `
             <span class="badge badge-green" style="padding: 4px 10px;">Pago</span>
+          ` : (!isClosed ? `
+            <button class="btn btn-sm" style="padding:6px 12px; font-size:0.75rem; background:rgba(255,255,255,0.05); color:var(--text-muted); border:1px solid rgba(255,255,255,0.1); font-weight: 600; cursor:not-allowed;" title="Esta fatura ainda está aberta" onclick="showToast('Esta fatura ainda está aberta. Só é possível pagar faturas já fechadas.', 'warning')">⏳ Em Aberto</button>
           ` : ((window._currentSaldo || 0) >= total ? `
             <button class="btn btn-sm" style="padding:6px 12px; font-size:0.75rem; background:rgba(59,130,246,0.1); color:#60A5FA; border:1px solid rgba(59,130,246,0.3); font-weight: 600;" onclick="pagarFatura('${cartaoId}', ${total}, '${cartaoNome}', ${mes})">Pagar Fatura</button>
           ` : `
             <button class="btn btn-sm" style="padding:6px 12px; font-size:0.75rem; background:rgba(255,255,255,0.05); color:var(--text-muted); border:1px solid rgba(255,255,255,0.1); font-weight: 600; cursor:not-allowed;" title="Saldo insuficiente" onclick="showToast('Saldo insuficiente. Você tem ' + formatCurrency(window._currentSaldo || 0) + '.', 'error')">Pagar Fatura</button>
-          `)}
+          `)))}
         </div>
       </div>
     `;
@@ -761,6 +782,13 @@ window.abrirModalFatura = function(mes) {
 }
 
 window.pagarFatura = async function(cartaoId, total, cartaoNome, mes) {
+  const todayDate = new Date();
+  const todayBillingState = findBillingMonthForDate(todayDate, ciclosMap);
+  const isClosed = (todayBillingState.year > currentYear || (todayBillingState.year === currentYear && todayBillingState.month > mes));
+  if (!isClosed) {
+    showToast('Esta fatura ainda não fechou. Só é possível pagar faturas já fechadas.', 'warning');
+    return;
+  }
   if (!confirm(`Deseja gerar o pagamento da fatura do ${cartaoNome} no valor de ${formatCurrency(total)}?`)) return;
   
   const { end } = getBillingDateRange(currentYear, mes, ciclosMap);
@@ -791,30 +819,135 @@ window.pagarFatura = async function(cartaoId, total, cartaoNome, mes) {
   }
 }
 
+// ── Abrir Modal Categoria ──
+window.abrirModalCategoria = function(catId) {
+  const modal = document.getElementById('modal-fatura');
+  const title = document.getElementById('fatura-modal-title');
+  const list = document.getElementById('fatura-modal-list');
+  const totalEl = document.getElementById('fatura-modal-total');
+  
+  if (!modal || !title || !list || !totalEl) return;
+  
+  const cat = getCategoriaById(catId);
+  const despesasCat = (window._currentChartDespesas || []).filter(l => l.categoria === catId);
+  
+  const nomeMes = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+  const mesStr = nomeMes[window._currentChartMonth || 0] || '';
+  
+  let modeLabel = '';
+  if (currentViewMode === 'credito') modeLabel = `Fatura de ${mesStr}`;
+  else if (currentViewMode === 'boleto') modeLabel = `Boletos de ${mesStr}`;
+  else modeLabel = `Total — ${mesStr}`;
+  
+  title.innerHTML = `<span style="margin-right:8px">${cat.icon}</span> ${cat.label} <span style="font-size:0.8rem; color:var(--text-muted); font-weight:normal; margin-left:6px">(${modeLabel})</span>`;
+  
+  if (despesasCat.length === 0) {
+    list.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:20px 0">Nenhum gasto registrado nesta categoria.</div>`;
+    totalEl.textContent = 'R$ 0,00';
+  } else {
+    const sorted = [...despesasCat].sort((a,b) => {
+       const da = a.data.toDate ? a.data.toDate() : new Date(a.data);
+       const db = b.data.toDate ? b.data.toDate() : new Date(b.data);
+       return db - da;
+    });
+    
+    const total = sorted.reduce((s,l) => s + l.valor, 0);
+    totalEl.textContent = formatCurrency(total);
+    
+    list.innerHTML = sorted.map(l => {
+      const d = l.data.toDate ? l.data.toDate() : new Date(l.data);
+      const dataStr = d.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
+      
+      return `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid rgba(255,255,255,0.05); border-radius:8px; background:rgba(255,255,255,0.02)">
+          <div style="display:flex; align-items:center; gap:10px; overflow:hidden">
+            <span style="font-size:1.2rem">${cat.icon}</span>
+            <div style="display:flex; flex-direction:column; overflow:hidden">
+               <span style="font-size:0.95rem; font-weight:500; white-space:nowrap; text-overflow:ellipsis; overflow:hidden">${l.descricao || 'Sem descrição'}</span>
+               <span style="font-size:0.75rem; color:var(--text-muted)">${dataStr}</span>
+            </div>
+          </div>
+          <div style="font-family:monospace; font-weight:600; color:var(--danger-color); font-size:1rem">
+            ${formatCurrency(l.valor)}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+  
+  modal.classList.add('active');
+  document.body.style.overflow = 'hidden';
+};
+
 // ── Render Category Chart ──
 function renderCategoryChart() {
   const chartSelect = document.getElementById('chart-month-select');
   const nomeMes = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-  
-  // Initialize select if empty
-  if (chartSelect && chartSelect.options.length === 0 && window._faturasCurrentYear) {
-    const meses = Object.keys(window._faturasCurrentYear).map(m => parseInt(m)).sort((a,b) => a - b);
-    chartSelect.innerHTML = meses.map(m => `<option value="${m}">Fatura de ${nomeMes[m]}</option>`).join('');
+  if (!chartSelect) return;
+
+  const currentModeOnSelect = chartSelect.getAttribute('data-mode');
+  if (currentModeOnSelect !== currentViewMode || chartSelect.options.length === 0) {
+    const oldVal = chartSelect.value;
+    chartSelect.setAttribute('data-mode', currentViewMode);
     
-    // Select current invoice by default
-    const today = new Date();
-    const todayBilling = findBillingMonthForDate(today, ciclosMap);
-    if (meses.includes(todayBilling.month)) {
-      chartSelect.value = todayBilling.month;
+    let optionsHtml = '';
+    for (let m = 0; m < 12; m++) {
+      let label = nomeMes[m];
+      if (currentViewMode === 'credito') label = `Fatura de ${nomeMes[m]}`;
+      else if (currentViewMode === 'boleto') label = `Boletos de ${nomeMes[m]}`;
+      optionsHtml += `<option value="${m}">${label}</option>`;
+    }
+    chartSelect.innerHTML = optionsHtml;
+    
+    if (oldVal && !isNaN(oldVal) && currentModeOnSelect === currentViewMode) {
+      chartSelect.value = oldVal;
+    } else {
+      const today = new Date();
+      if (currentViewMode === 'credito') {
+        const todayBilling = findBillingMonthForDate(today, ciclosMap);
+        chartSelect.value = todayBilling.month;
+      } else {
+        chartSelect.value = today.getMonth();
+      }
     }
     
-    // Listen for changes
-    chartSelect.addEventListener('change', () => renderCategoryChart());
+    if (!chartSelect.hasAttribute('data-listener')) {
+      chartSelect.setAttribute('data-listener', 'true');
+      chartSelect.addEventListener('change', () => renderCategoryChart());
+    }
   }
 
-  const selectedMonth = chartSelect && chartSelect.value ? parseInt(chartSelect.value) : -1;
-  const sourceArray = (window._faturasCurrentYear && window._faturasCurrentYear[selectedMonth]) ? window._faturasCurrentYear[selectedMonth] : [];
-  const despesas = sourceArray.filter(l => l.tipo === 'despesa' && l.status !== 'cancelado');
+  const selectedMonth = parseInt(chartSelect.value || 0);
+  window._currentChartMonth = selectedMonth;
+  let despesas = [];
+
+  if (currentViewMode === 'credito') {
+    const sourceArray = (window._faturasCurrentYear && window._faturasCurrentYear[selectedMonth]) ? window._faturasCurrentYear[selectedMonth] : [];
+    despesas = sourceArray.filter(l => l.tipo === 'despesa' && l.status !== 'cancelado');
+  } else if (currentViewMode === 'boleto') {
+    despesas = allLancamentosGlob.filter(l => {
+      if (l.status === 'cancelado' || l.tipo !== 'despesa' || l.formaPagamento !== 'boleto') return false;
+      const d = l.data.toDate ? l.data.toDate() : new Date(l.data);
+      return d.getFullYear() === currentYear && d.getMonth() === selectedMonth;
+    });
+  } else {
+    despesas = allLancamentosGlob.filter(l => {
+      if (l.status === 'cancelado' || l.tipo !== 'despesa') return false;
+      const d = l.data.toDate ? l.data.toDate() : new Date(l.data);
+      let month, year;
+      if (l.formaPagamento === 'credito' || l.formaPagamento === 'cartao_credito' || l.cartaoId) {
+        const billing = findBillingMonthForDate(d, ciclosMap);
+        month = billing.month;
+        year = billing.year;
+      } else {
+        month = d.getMonth();
+        year = d.getFullYear();
+      }
+      return year === currentYear && month === selectedMonth;
+    });
+  }
+
+  window._currentChartDespesas = despesas;
   const catTotals = {};
 
   despesas.forEach(l => {
@@ -858,6 +991,13 @@ function renderCategoryChart() {
       responsive: true,
       maintainAspectRatio: true,
       cutout: '65%',
+      onClick: (event, elements) => {
+        if (elements && elements.length > 0) {
+          const index = elements[0].index;
+          const catId = entries[index][0];
+          if (catId) window.abrirModalCategoria(catId);
+        }
+      },
       plugins: {
         legend: { display: false },
         tooltip: {
@@ -871,11 +1011,11 @@ function renderCategoryChart() {
 
   // Legend
   const totalDespesas = values.reduce((a, b) => a + b, 0);
-  document.getElementById('category-legend').innerHTML = entries.slice(0, 6).map(([id, v]) => {
+  document.getElementById('category-legend').innerHTML = entries.map(([id, v]) => {
     const cat = getCategoriaById(id);
     const pct = ((v / totalDespesas) * 100).toFixed(0);
     return `
-      <div class="chart-legend-item">
+      <div class="chart-legend-item" style="cursor:pointer; transition: background 0.2s; padding: 4px 8px; border-radius: 6px;" onclick="abrirModalCategoria('${id}')" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'" title="Clique para ver os gastos com ${cat.label}">
         <div class="chart-legend-label">
           <div class="chart-legend-dot" style="background:${cat.color}"></div>
           <span>${cat.icon} ${cat.label}</span>
@@ -891,6 +1031,7 @@ function renderCategoryChart() {
 
 // ── Render Cartoes Summary ──
 function renderCartoesSum() {
+  if (!cartoesSum || !cartoesEmpty) return;
   if (allCartoes.length === 0) {
     cartoesSum.style.display = 'none';
     cartoesEmpty.style.display = 'flex';

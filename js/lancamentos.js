@@ -2,7 +2,7 @@
 import { requireAuth, logout, getUserInitials } from './auth.js';
 import {
   addLancamento, getCartoes, getCiclosMap,
-  formatCurrency, CATEGORIAS
+  formatCurrency, CATEGORIAS, loadCategorias
 } from './db.js';
 
 // ── State ──
@@ -40,6 +40,7 @@ async function init() {
 
   await loadCartoes();
   ciclosMap = await getCiclosMap(currentUser.uid);
+  await loadCategorias(currentUser.uid);
   renderCategories();
   bindEvents();
 }
@@ -60,8 +61,13 @@ async function loadCartoes() {
 
 // ── Render Categories ──
 function renderCategories() {
+  const filtered = CATEGORIAS.filter(cat => (cat.tipo || 'despesa') === selectedTipo);
+  if (!filtered.some(c => c.id === selectedCat) && filtered.length > 0) {
+    selectedCat = filtered[0].id;
+    document.getElementById('categoria').value = selectedCat;
+  }
   const grid = document.getElementById('category-grid');
-  grid.innerHTML = CATEGORIAS.map(cat => `
+  grid.innerHTML = filtered.map(cat => `
     <div
       class="category-option ${cat.id === selectedCat ? 'selected' : ''}"
       data-cat="${cat.id}"
@@ -102,6 +108,8 @@ window.setTipo = function(tipo) {
     document.getElementById('toggle-parcelado').checked = false;
     document.getElementById('parcela-fields').style.display = 'none';
   }
+
+  renderCategories();
 };
 
 // ── Forma de Pagamento ──
